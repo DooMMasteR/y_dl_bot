@@ -140,3 +140,14 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# media files
+*.mp4
+*.mp3
+*.webm
+*.opus
+*.ogg
+*.mkv
+*.m4a
+*.m4v
+*.wav
+*.raw
