@@ -12,6 +12,7 @@ def my_hook(d):
     if d['status'] == 'finished':
         print('Done downloading, now converting ...')
 
+
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -28,7 +29,6 @@ ydl_opts = {
 }
 
 logger.setLevel(logging.INFO)
-
 
 updater = Updater(token='TOKEN', use_context=True)
 dispatcher = updater.dispatcher
@@ -72,9 +72,7 @@ def link_handle(update, context):
                 context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
 
 
-
 link_handler = MessageHandler(Filters.text & (~Filters.command) & Filters.update.message, link_handle)
 dispatcher.add_handler(link_handler)
-
 
 updater.start_polling()
