@@ -51,7 +51,6 @@ def link_handle(update, context):
         logger.info("Got URL(s): " + pprint.pformat(urls))
         for url in urls:
             logger.info("Trying URL: " + url)
-            ydl = youtube_dl.YoutubeDL
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
                 # ydl_results = ydl.download(url=url, download=True)
                 try:
