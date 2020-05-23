@@ -1,17 +1,21 @@
 from __future__ import unicode_literals
+
 import logging
+import pprint
 import re
+
+import youtube_dl
+from telegram import InputMediaVideo
 from telegram.ext import MessageHandler, Filters
 from telegram.ext import Updater
-from telegram import InputTextMessageContent, InputMediaVideo
-import youtube_dl
-import pprint
+from telegram.ext.dispatcher import run_async
+
 from secret import telegram_secret
 
 
 def my_hook(d):
     if d['status'] == 'finished':
-        print('Done downloading, now converting ...')
+        logger.info("Download finished.")
 
 
 logging.basicConfig(level=logging.INFO,
@@ -20,7 +24,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger()
 
 ydl_opts = {
-    'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
+    'format': 'bestvideo[ext=mp4,filesize<20M]+bestaudio[ext=m4a]/bestvideo[filesize<20M,ext=mp4]+bestaudio/best[ext=mp4,filesize<25M]',
     'postprocessors': [{
         'key': 'FFmpegVideoConvertor',
         'preferedformat': 'mp4'
@@ -31,7 +35,7 @@ ydl_opts = {
 
 logger.setLevel(logging.INFO)
 
-updater = Updater(token=telegram_secret, use_context=True)
+updater = Updater(token=telegram_secret, use_context=True, workers=12)
 dispatcher = updater.dispatcher
 
 
@@ -39,9 +43,8 @@ def start(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
 
 
+@run_async
 def link_handle(update, context):
-    pprint.pprint(update)
-    pprint.pprint(context)
     if update.message is None and update.channel_post is None:
         return
     text = update.message.text or update.channel_post.text
@@ -68,7 +71,7 @@ def link_handle(update, context):
                 logger.info("Downloaded video: " + pprint.pformat(ydl_filename))
                 video = InputMediaVideo(open(ydl_filename, 'rb'))
                 context.bot.send_video(chat_id=update.effective_chat.id, video=open(ydl_filename, 'rb'),
-                                       supports_streaming=True)
+                                       supports_streaming=True, timeout=60)
                 context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
 
 
@@ -76,3 +79,4 @@ link_handler = MessageHandler(Filters.text & (~Filters.command) & Filters.update
 dispatcher.add_handler(link_handler)
 
 updater.start_polling()
+updater.idle()
