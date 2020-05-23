@@ -6,6 +6,7 @@ from telegram.ext import Updater
 from telegram import InputTextMessageContent, InputMediaVideo
 import youtube_dl
 import pprint
+from secret import telegram_secret
 
 
 def my_hook(d):
@@ -30,7 +31,7 @@ ydl_opts = {
 
 logger.setLevel(logging.INFO)
 
-updater = Updater(token='TOKEN', use_context=True)
+updater = Updater(token=telegram_secret, use_context=True)
 dispatcher = updater.dispatcher
 
 
@@ -56,7 +57,7 @@ def link_handle(update, context):
                 try:
                     result = ydl.extract_info(url=url, download=False)
                     new_message = context.bot.send_message(chat_id=update.effective_chat.id,
-                                                           text="Trying to fetch video...")
+                                                           text="Trying to fetch video...", disable_notification=True)
                     result = ydl.extract_info(url=url, download=True)
                     ydl_filename = ydl.prepare_filename(result)
                 except youtube_dl.utils.DownloadError as e:
