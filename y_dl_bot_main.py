@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger()
 
 ydl_opts = {
-    'format': 'bestvideo[ext=mp4,filesize<20M]+bestaudio[ext=m4a]/bestvideo[filesize<20M,ext=mp4]+bestaudio/best[ext=mp4,filesize<25M]',
+    'format': 'bestvideo[ext=mp4,filesize<20M]+bestaudio[ext=m4a]/bestvideo[filesize<20M,ext=mp4]+bestaudio/best[ext=mp4,filesize<25M]/best[filesize<25M]/best',
     'postprocessors': [{
         'key': 'FFmpegVideoConvertor',
         'preferedformat': 'mp4'
@@ -35,7 +35,7 @@ ydl_opts = {
 
 logger.setLevel(logging.INFO)
 
-updater = Updater(token=telegram_secret, use_context=True, workers=12)
+updater = Updater(token=telegram_secret, use_context=True, workers=5)
 dispatcher = updater.dispatcher
 
 
