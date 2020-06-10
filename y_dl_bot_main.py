@@ -70,8 +70,9 @@ def link_handle(update, context):
             if 'ydl_filename' in locals() and ydl_filename:
                 logger.info("Downloaded video: " + pprint.pformat(ydl_filename))
                 video = InputMediaVideo(open(ydl_filename, 'rb'))
+                caption_text = "Source: " + url;
                 context.bot.send_video(chat_id=update.effective_chat.id, video=open(ydl_filename, 'rb'),
-                                       supports_streaming=True, timeout=60)
+                                       supports_streaming=True, timeout=60, caption=caption_text)
                 context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
 
 
