@@ -71,7 +71,6 @@ def link_handle(update, context):
             if 'ydl_filename' in locals() and ydl_filename:
                 logger.info("Downloaded video: " + pprint.pformat(ydl_filename))
                 video = InputMediaVideo(open(ydl_filename, 'rb'))
-                caption_text = "Source: " + url
                 file = None
                 # We need a lot of workarounds because YoutubeDL sometimes messes with file names
                 try:
@@ -84,9 +83,10 @@ def link_handle(update, context):
                     except FileNotFoundError as e:
                         logger.error("Even the mp4 does not exist for: " + ydl_filename)
                         context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
-
-                context.bot.send_video(chat_id=update.effective_chat.id, video=file,
-                                       supports_streaming=True, timeout=60, caption=caption_text)
+                if file:
+                    caption_text = "Source: " + url
+                    context.bot.send_video(chat_id=update.effective_chat.id, video=file,
+                                           supports_streaming=True, timeout=60, caption=caption_text)
 
             context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
 
