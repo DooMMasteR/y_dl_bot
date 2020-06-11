@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import logging
 import pprint
 import re
+import os
 
 import youtube_dl
 from telegram import InputMediaVideo
@@ -70,7 +71,20 @@ def link_handle(update, context):
             if 'ydl_filename' in locals() and ydl_filename:
                 logger.info("Downloaded video: " + pprint.pformat(ydl_filename))
                 video = InputMediaVideo(open(ydl_filename, 'rb'))
-                caption_text = "Source: " + url;
+                caption_text = "Source: " + url
+                file = None
+                # We need a lot of workarounds because YoutubeDL sometimes messes with file names
+                try:
+                    file = open(ydl_filename, 'rb')
+                except FileNotFoundError as e:
+                    logger.warning("File not found: " + ydl_filename)
+                if not file:
+                    try:
+                        file = open(os.path.splitext(ydl_filename)[0] + '.mp4', 'rb')
+                    except FileNotFoundError as e:
+                        logger.error("Even the mp4 does not exist for: " + ydl_filename)
+                        context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
+
                 context.bot.send_video(chat_id=update.effective_chat.id, video=open(ydl_filename, 'rb'),
                                        supports_streaming=True, timeout=60, caption=caption_text)
 
