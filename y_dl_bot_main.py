@@ -70,7 +70,6 @@ def link_handle(update, context):
 
             if 'ydl_filename' in locals() and ydl_filename:
                 logger.info("Downloaded video: " + pprint.pformat(ydl_filename))
-                video = InputMediaVideo(open(ydl_filename, 'rb'))
                 file = None
                 # We need a lot of workarounds because YoutubeDL sometimes messes with file names
                 try:
