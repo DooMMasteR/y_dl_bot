@@ -7,7 +7,7 @@ import os
 
 import youtube_dl
 from telegram import InputMediaVideo
-from telegram.ext import MessageHandler, Filters
+from telegram.ext import MessageHandler, Filters, CommandHandler
 from telegram.ext import Updater
 from telegram.ext.dispatcher import run_async
 
@@ -26,6 +26,7 @@ logger = logging.getLogger()
 
 ydl_opts = {
     'format': 'bestvideo[ext=mp4,filesize<20M]+bestaudio[ext=m4a]/bestvideo[filesize<20M,ext=mp4]+bestaudio/best[ext=mp4,filesize<25M]/best[filesize<25M]/best',
+    'outtmpl': '%(id)s.%(ext)s',
     'postprocessors': [{
         'key': 'FFmpegVideoConvertor',
         'preferedformat': 'mp4'
@@ -88,8 +89,12 @@ def link_handle(update, context):
                                            supports_streaming=True, timeout=60, caption=caption_text)
 
 
+def ping(update, context):
+   update.message.reply_text('pong')
+
 link_handler = MessageHandler(Filters.text & (~Filters.command) & Filters.update.message, link_handle)
 dispatcher.add_handler(link_handler)
+dispatcher.add_handler(CommandHandler("ping", ping))
 
 updater.start_polling()
 updater.idle()
