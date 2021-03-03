@@ -1,18 +1,20 @@
 from __future__ import unicode_literals
 
 import logging
+import os
 import pprint
 import re
-import os
+from urllib.parse import urlparse
 
 import youtube_dl
-from telegram import InputMediaVideo
+from telegram import error
 from telegram.ext import MessageHandler, Filters, CommandHandler
 from telegram.ext import Updater
 from telegram.ext.dispatcher import run_async
 
 from secret import telegram_secret
 
+ignoreList = ["9gag.com"]
 
 def my_hook(d):
     if d['status'] == 'finished':
@@ -56,7 +58,9 @@ def link_handle(update, context):
     if urls:
         logger.info("Got URL(s): " + pprint.pformat(urls))
         for url in urls:
-            logger.info("Trying URL: " + url)
+            if urlparse(url).netloc in ignoreList:
+                logger.info("Skipping ignored host.")
+                continue
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
                 # ydl_results = ydl.download(url=url, download=True)
                 try:
@@ -85,12 +89,18 @@ def link_handle(update, context):
                         context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
                 if file:
                     caption_text = "Source: " + url
-                    context.bot.send_video(chat_id=update.effective_chat.id, video=file,
-                                           supports_streaming=True, timeout=60, caption=caption_text)
+                    try:
+                        context.bot.send_video(chat_id=update.effective_chat.id, video=file, supports_streaming=True,
+                                               timeout=60, caption=caption_text)
+                    except error.NetworkError as e:
+                        logger.warning("Upload failed: " + e.message)
+                    finally:
+                        context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
 
 
 def ping(update, context):
-   update.message.reply_text('pong')
+    update.message.reply_text('pong')
+
 
 link_handler = MessageHandler(Filters.text & (~Filters.command) & Filters.update.message, link_handle)
 dispatcher.add_handler(link_handler)
