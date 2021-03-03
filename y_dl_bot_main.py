@@ -16,6 +16,7 @@ from secret import telegram_secret
 
 ignoreList = ["9gag.com"]
 
+
 def my_hook(d):
     if d['status'] == 'finished':
         logger.info("Download finished.")
@@ -27,7 +28,8 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger()
 
 ydl_opts = {
-    'format': 'bestvideo[ext=mp4,filesize<20M]+bestaudio[ext=m4a]/bestvideo[filesize<20M,ext=mp4]+bestaudio/best[ext=mp4,filesize<25M]/best[filesize<25M]/best',
+    'format': 'bestvideo[ext=mp4,filesize<20M]+bestaudio[ext=m4a]/bestvideo[filesize<20M,ext=mp4]+bestaudio/best['
+              'ext=mp4,filesize<25M]/best[filesize<25M]/best',
     'outtmpl': '%(id)s.%(ext)s',
     'postprocessors': [{
         'key': 'FFmpegVideoConvertor',
@@ -53,7 +55,7 @@ def link_handle(update, context):
         return
     text = update.message.text or update.channel_post.text
 
-    urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', text)
+    urls = re.findall(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", text)
 
     if urls:
         logger.info("Got URL(s): " + pprint.pformat(urls))
@@ -98,7 +100,7 @@ def link_handle(update, context):
                         context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
 
 
-def ping(update, context):
+def ping(update):
     update.message.reply_text('pong')
 
 
