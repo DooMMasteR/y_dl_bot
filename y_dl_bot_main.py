@@ -4,9 +4,10 @@ import logging
 import os
 import pprint
 import re
+import traceback
 from urllib.parse import urlparse
 
-import youtube_dl
+import yt_dlp as youtube_dl
 from telegram import error
 from telegram.ext import MessageHandler, Filters, CommandHandler
 from telegram.ext import Updater
@@ -28,8 +29,8 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger()
 
 ydl_opts = {
-    'format': 'bestvideo[ext=mp4,filesize<20M]+bestaudio[ext=m4a]/bestvideo[filesize<20M,ext=mp4]+bestaudio/best['
-              'ext=mp4,filesize<25M]/best[filesize<25M]/best',
+    'format': 'bestvideo[ext=mp4][filesize<30M]+bestaudio[ext=m4a]/bestvideo[filesize<30M][ext=mp4]+bestaudio/best['
+              'ext=mp4][filesize<35M]/best[filesize<35M]/best',
     'outtmpl': '%(id)s.%(ext)s',
     'postprocessors': [{
         'key': 'FFmpegVideoConvertor',
@@ -41,7 +42,7 @@ ydl_opts = {
 
 logger.setLevel(logging.INFO)
 
-updater = Updater(token=telegram_secret, use_context=True, workers=5)
+updater = Updater(token=telegram_secret, workers=5)
 dispatcher = updater.dispatcher
 
 
@@ -49,12 +50,15 @@ def start(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
 
 
+def error_callback(update, context):
+    raise context.error
+
 @run_async
 def link_handle(update, context):
     if update.message is None and update.channel_post is None:
         return
     text = update.message.text or update.channel_post.text
-
+    url = ""
     urls = re.findall(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", text)
 
     if urls:
@@ -63,19 +67,32 @@ def link_handle(update, context):
             if urlparse(url).netloc in ignoreList:
                 logger.info("Skipping ignored host.")
                 continue
-            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                # ydl_results = ydl.download(url=url, download=True)
-                try:
-                    result = ydl.extract_info(url=url, download=False)
-                    new_message = context.bot.send_message(chat_id=update.effective_chat.id,
-                                                           text="Trying to fetch video...", disable_notification=True)
-                    result = ydl.extract_info(url=url, download=True)
-                    ydl_filename = ydl.prepare_filename(result)
-                except youtube_dl.utils.DownloadError as e:
-                    if 'new_message' in locals():
-                        context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
+            else:
+                logger.info("Got netloc: " + urlparse(url).netloc)
 
-            if 'ydl_filename' in locals() and ydl_filename:
+            logger.info("Fetching video!")
+            try:
+                with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                    # ydl_results = ydl.download(url=url, download=True)
+                    try:
+                        logger.debug("Extracting url info.")
+                        result = ydl.extract_info(url=url)
+                        logger.debug("setting up message.")
+                        new_message = context.bot.send_message(chat_id=update.effective_chat.id,
+                                                               text="Trying to fetch video...", disable_notification=True)
+                        logger.debug("downloading file")
+                        result = ydl.extract_info(url=url, process=True)
+                        logger.debug("getting file-name")
+                        ydl_filename = ydl.prepare_filename(result)
+                    except youtube_dl.utils.DownloadError as e:
+                        if 'new_message' in locals():
+                            context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
+                    except:
+                        logger.error(traceback.format_exc())
+            except:
+                logger.error(traceback.format_exc())
+
+        if 'ydl_filename' in locals() and ydl_filename:
                 logger.info("Downloaded video: " + pprint.pformat(ydl_filename))
                 file = None
                 # We need a lot of workarounds because YoutubeDL sometimes messes with file names
@@ -106,6 +123,7 @@ def ping(update):
 
 link_handler = MessageHandler(Filters.text & (~Filters.command) & Filters.update.message, link_handle)
 dispatcher.add_handler(link_handler)
+dispatcher.add_error_handler(error_callback)
 dispatcher.add_handler(CommandHandler("ping", ping))
 
 updater.start_polling()
