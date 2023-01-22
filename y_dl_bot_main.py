@@ -46,8 +46,7 @@ ydl_opts = {
 
 logger.setLevel(logging.INFO)
 
-application = ApplicationBuilder().token(telegram_secret).concurrent_updates(concurrent_updates=True)
-application.connection_pool_size(connection_pool_size=8)
+application = ApplicationBuilder().token(telegram_secret).concurrent_updates(concurrent_updates=True).connection_pool_size(connection_pool_size=8).build()
 
 
 # updater = Updater(token=telegram_secret, workers=8)
