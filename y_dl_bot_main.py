@@ -88,7 +88,7 @@ async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         ydl_filename = ydl.prepare_filename(result)
                     except youtube_dl.utils.DownloadError as e:
                         if 'new_message' in locals():
-                            context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
+                            await context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
                     except:
                         logger.error(traceback.format_exc())
             except:
