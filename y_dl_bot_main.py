@@ -14,11 +14,13 @@ from telegram.ext import MessageHandler, CommandHandler, ApplicationBuilder, Con
 
 from secret import telegram_secret
 
-#ignoreList = ["9gag.com"]
+# ignoreList = ["9gag.com"]
 ignoreList = ["twitch.tv", "www.twitch.tv"]
+
 
 async def signal_handler(signum, frame):
     raise Exception("Timed out!")
+
 
 def my_hook(d):
     if d['status'] == 'finished':
@@ -45,8 +47,10 @@ ydl_opts = {
 logger.setLevel(logging.INFO)
 
 application = ApplicationBuilder().token(telegram_secret).build()
-#updater = Updater(token=telegram_secret, workers=8)
-#dispatcher = updater.dispatcher
+
+
+# updater = Updater(token=telegram_secret, workers=8)
+# dispatcher = updater.dispatcher
 
 
 def start(update, context):
@@ -55,6 +59,7 @@ def start(update, context):
 
 def error_callback(update, context):
     raise context.error
+
 
 async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message is None and update.channel_post is None:
@@ -78,7 +83,8 @@ async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     # ydl_results = ydl.download(url=url, download=True)
                     try:
                         new_message = await context.bot.send_message(chat_id=update.effective_chat.id,
-                                                               text="Trying to fetch video...", disable_notification=True)
+                                                                     text="Trying to fetch video...",
+                                                                     disable_notification=True)
                         logger.debug("Extracting url info.")
                         result = ydl.extract_info(url=url)
                         logger.debug("setting up message.")
@@ -88,35 +94,36 @@ async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         ydl_filename = ydl.prepare_filename(result)
                     except youtube_dl.utils.DownloadError as e:
                         if 'new_message' in locals():
-                            await context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
+                            await context.bot.deleteMessage(chat_id=update.effective_chat.id,
+                                                            message_id=new_message.message_id)
                     except:
                         logger.error(traceback.format_exc())
             except:
                 logger.error(traceback.format_exc())
 
         if 'ydl_filename' in locals() and ydl_filename:
-                logger.info("Downloaded video: " + pprint.pformat(ydl_filename))
-                file = None
-                # We need a lot of workarounds because YoutubeDL sometimes messes with file names
+            logger.info("Downloaded video: " + pprint.pformat(ydl_filename))
+            file = None
+            # We need a lot of workarounds because YoutubeDL sometimes messes with file names
+            try:
+                file = open(ydl_filename, 'rb')
+            except FileNotFoundError as e:
+                logger.warning("File not found: " + ydl_filename)
+            if not file:
                 try:
-                    file = open(ydl_filename, 'rb')
+                    file = open(os.path.splitext(ydl_filename)[0] + '.mp4', 'rb')
                 except FileNotFoundError as e:
-                    logger.warning("File not found: " + ydl_filename)
-                if not file:
-                    try:
-                        file = open(os.path.splitext(ydl_filename)[0] + '.mp4', 'rb')
-                    except FileNotFoundError as e:
-                        logger.error("Even the mp4 does not exist for: " + ydl_filename)
-                        await context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
-                if file:
-                    caption_text = "Source: " + url
-                    try:
-                        await context.bot.send_video(chat_id=update.effective_chat.id, video=file, supports_streaming=True,
-                                               write_timeout=60, caption=caption_text)
-                    except error.NetworkError as e:
-                        logger.warning("Upload failed: " + e.message)
-                    finally:
-                        await context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
+                    logger.error("Even the mp4 does not exist for: " + ydl_filename)
+                    await context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
+            if file:
+                caption_text = "Source: " + url
+                try:
+                    await context.bot.send_video(chat_id=update.effective_chat.id, video=file, supports_streaming=True,
+                                                 write_timeout=60, caption=caption_text)
+                except error.NetworkError as e:
+                    logger.warning("Upload failed: " + e.message)
+                finally:
+                    await context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
 
 
 def ping(update):
