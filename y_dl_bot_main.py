@@ -119,7 +119,8 @@ async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 caption_text = "Source: " + url
                 try:
                     await context.bot.send_video(chat_id=update.effective_chat.id, video=file, supports_streaming=True,
-                                                 write_timeout=60, caption=caption_text)
+                                                 write_timeout=120, connect_timeout=120, pool_timeout=120, caption=caption_text, 
+                                                 disable_notification=True, reply_to_message_id=update.message.message_id)
                 except error.NetworkError as e:
                     logger.warning("Upload failed: " + e.message)
                 finally:
