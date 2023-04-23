@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 import yt_dlp as youtube_dl
 from telegram import error, Update
 from telegram.ext import MessageHandler, CommandHandler, ApplicationBuilder, ContextTypes, filters
+from telegram.helpers import escape_markdown
 
 from secret import telegram_secret
 
@@ -162,16 +163,18 @@ async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logger.error("Even the mp4 does not exist for: " + ydl_filename)
                     await context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
             if file:
-                caption_text = "Source: " + url
+                caption_text = escape_markdown("Source: " + url, version=2)
                 title = get_title(url)
                 if title:
-                    caption_text = f"*{title}*\n\n{caption_text}"
+                    caption_text = f"*{escape_markdown(title, version=2)}*\n\n{caption_text}"
+
+                logger.info(f"Caption is : {caption_text}")
                 try:
                     await context.bot.send_video(chat_id=update.effective_chat.id, video=file, supports_streaming=True,
                                                  write_timeout=120, connect_timeout=120, pool_timeout=120,
                                                  caption=caption_text,
                                                  disable_notification=True,
-                                                 reply_to_message_id=update.message.message_id, parse_mode='markdown')
+                                                 reply_to_message_id=update.message.message_id, parse_mode='MarkdownV2')
                 except error.NetworkError as e:
                     logger.warning("Upload failed: " + e.message)
                 finally:
