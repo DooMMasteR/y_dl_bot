@@ -93,7 +93,7 @@ def get_title(url: str) -> [str, None]:
         if not title_tag:
             title_divs = soup.find_all("div", {"data-adclicklocation": "title"})
             if title_divs:
-                title_tag = title_divs[0].children.find("h1")
+                title_tag = title_divs[0].find("h1")
 
         if not title_tag:
             logger.warning("Reddit changed their layout, update parser")
