@@ -5,10 +5,10 @@ import os
 import pprint
 import re
 import traceback
-from urllib.request import urlopen
-from bs4 import BeautifulSoup
 from urllib.parse import urlparse
+from urllib.request import urlopen, Request
 
+from bs4 import BeautifulSoup
 import yt_dlp as youtube_dl
 from telegram import error, Update
 from telegram.ext import MessageHandler, CommandHandler, ApplicationBuilder, ContextTypes, filters
@@ -61,6 +61,50 @@ def start(update, context):
 
 def error_callback(update, context):
     raise context.error
+
+
+def get_title(url: str) -> str | None:
+    """
+    Extract the title of a post
+
+    :param url: The URL of the post
+    :return: The extracted title or None in case a title could not be found
+    """
+    try:
+        response = urlopen(Request(url, headers={"User-Agent": "Mozilla/5.0"}))
+    except Exception as exception:
+        logger.warning(f"Downloading HTML document {url} for title parsing failed: {exception}")
+        return None
+
+    if response.status != 200:
+        logger.warning(f"Got status code {response.status} while trying to download HTML doc {url} for title parsing")
+        return None
+
+    title_tag = None
+    parsed_url = urlparse(response.geturl())
+    soup = BeautifulSoup(response.read(), "html.parser")
+
+    if "reddit.com" in parsed_url.netloc:
+        title_h1s = soup.find_all('h1', {"id": re.compile("post-title.*")})
+        if title_h1s:
+            title_tag = title_h1s[0]
+
+        if not title_tag:
+            title_divs = soup.find_all("div", {"data-adclicklocation": "title"})
+            if title_divs:
+                title_tag = title_divs[0].children.find("h1")
+
+        if not title_tag:
+            logger.warning("Reddit changed their layout, update parser")
+            return None
+    else:
+        titles = soup.find_all("title")
+        if not titles:
+            logger.warning("No title found")
+            return None
+        title_tag = titles[0]
+
+    return title_tag.get_text()
 
 
 async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -118,17 +162,10 @@ async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logger.error("Even the mp4 does not exist for: " + ydl_filename)
                     await context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
             if file:
-                title = None
-                try:
-                    title = BeautifulSoup(urlopen(url), parser="lxml").title.get_text()
-                except:
-                    pass
-
+                caption_text = "Source: " + url
+                title = get_title(url)
                 if title:
-                    caption_text = "*" + title + "*" + "\n\nSource: " + url
-                else:
-                    caption_text = "Source: " + url
-
+                    caption_text = f"*{title}*\n\n{caption_text}"
                 try:
                     await context.bot.send_video(chat_id=update.effective_chat.id, video=file, supports_streaming=True,
                                                  write_timeout=120, connect_timeout=120, pool_timeout=120,
