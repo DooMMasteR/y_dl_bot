@@ -63,7 +63,7 @@ def error_callback(update, context):
     raise context.error
 
 
-def get_title(url: str) -> str | None:
+def get_title(url: str) -> [str, None]:
     """
     Extract the title of a post
 
