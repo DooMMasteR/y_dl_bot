@@ -5,7 +5,8 @@ import os
 import pprint
 import re
 import traceback
-import signal
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 
 import yt_dlp as youtube_dl
@@ -46,7 +47,8 @@ ydl_opts = {
 
 logger.setLevel(logging.INFO)
 
-application = ApplicationBuilder().token(telegram_secret).concurrent_updates(concurrent_updates=True).connection_pool_size(connection_pool_size=8).build()
+application = ApplicationBuilder().token(telegram_secret).concurrent_updates(
+    concurrent_updates=True).connection_pool_size(connection_pool_size=8).pool_timeout(360).build()
 
 
 # updater = Updater(token=telegram_secret, workers=8)
@@ -116,11 +118,23 @@ async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logger.error("Even the mp4 does not exist for: " + ydl_filename)
                     await context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
             if file:
-                caption_text = "Source: " + url
+                title = None
+                try:
+                    title = BeautifulSoup(urlopen(url), parser="lxml").title.get_text()
+                except:
+                    pass
+
+                if title:
+                    caption_text = "*" + title + "*" + "\n\nSource: " + url
+                else:
+                    caption_text = "Source: " + url
+
                 try:
                     await context.bot.send_video(chat_id=update.effective_chat.id, video=file, supports_streaming=True,
-                                                 write_timeout=120, connect_timeout=120, pool_timeout=120, caption=caption_text, 
-                                                 disable_notification=True, reply_to_message_id=update.message.message_id)
+                                                 write_timeout=120, connect_timeout=120, pool_timeout=120,
+                                                 caption=caption_text,
+                                                 disable_notification=True,
+                                                 reply_to_message_id=update.message.message_id, parse_mode='markdown')
                 except error.NetworkError as e:
                     logger.warning("Upload failed: " + e.message)
                 finally:
@@ -132,6 +146,7 @@ def ping(update):
 
 
 link_handler = MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.UpdateType.MESSAGE, link_handle)
+
 application.add_handler(link_handler)
 application.add_error_handler(error_callback)
 application.add_handler(CommandHandler("ping", ping))
