@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+import asyncio
 import logging
 import os
 import pprint
@@ -64,7 +65,7 @@ def error_callback(update, context):
     raise context.error
 
 
-def get_title(url: str) -> [str, None]:
+async def get_title(url: str) -> [str, None]:
     """
     Extract the title of a post
 
@@ -104,7 +105,7 @@ def get_title(url: str) -> [str, None]:
             logger.warning("No title found")
             return None
         title_tag = titles[0]
-
+    logger.info("Title fetch finished.")
     return title_tag.get_text()
 
 
@@ -117,6 +118,7 @@ async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if urls:
         logger.info("Got URL(s): " + pprint.pformat(urls))
+        title_fetcher = None
         for url in urls:
             if urlparse(url).netloc in ignoreList:
                 logger.info("Skipping ignored host.")
@@ -124,6 +126,7 @@ async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 logger.info("Got netloc: " + urlparse(url).netloc)
 
+            title_fetcher = asyncio.create_task(get_title(url))
             logger.info("Fetching video!")
             try:
                 with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -164,9 +167,10 @@ async def link_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await context.bot.deleteMessage(chat_id=update.effective_chat.id, message_id=new_message.message_id)
             if file:
                 caption_text = escape_markdown("Source: " + url, version=2)
-                title = get_title(url)
-                if title:
-                    caption_text = f"*{escape_markdown(title, version=2)}*\n\n{caption_text}"
+                if title_fetcher:
+                    title = await title_fetcher
+                    if title:
+                        caption_text = f"*{escape_markdown(title, version=2)}*\n\n{caption_text}"
 
                 logger.info(f"Caption is : {caption_text}")
                 try:
